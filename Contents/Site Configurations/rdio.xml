@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site site="http://mikedecaro.com/site/rdio"
+       plugin="http://mikedecaro.com/site/rdio/display.swf"
+       identifier="com.plexapp.plugins.rdio"
+       initialState="playing"
+       version="1.0">
+       
+<seekbar type="javascript">
+  <percentComplete equals="(window.songPosition / window.songDuration) * 100.0" />
+  <end condition="window.initialized &amp;&amp; window.songState == 2" />
+</seekbar>
+
+ <!-- PLAYING -->
+ <state name="playing">
+  <event>
+   <condition>
+    <command name="pause" />
+   </condition>
+   <action>
+    <run script="window.apiswf.rdio_pause(); "/>
+    <goto state="paused" />
+   </action>
+  </event>
+ </state>
+ <!-- PAUSED -->
+ <state name="paused">
+  <event>
+   <condition>
+    <command name="play" />
+   </condition>
+   <action>
+    <run script="window.apiswf.rdio_play(); "/>
+    <goto state="playing" />
+   </action>
+  </event>
+ </state>
+ 
+</site>
