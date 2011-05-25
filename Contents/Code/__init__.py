@@ -161,6 +161,7 @@ def SongsMenu(sender, arg):
     for s in result['result']:
         trackIds += ('trackId=%s&' % s['key'])
     trackIds = trackIds[:-1]
+    Log(TRACK_URL % (PLAYBACK_TOKEN, trackIds));
     dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title='Play All', summary='', thumb=R(ICON)))
     
     for s in result['result']:
