@@ -7,11 +7,14 @@
        
 <seekbar type="javascript">
   <percentComplete equals="(window.songPosition / window.songDuration) * 100.0" />
-  <end condition="window.initialized &amp;&amp; window.songState == 2" />
+  <bigStep minus="window.apiswf.seek(window.songPosition - 30)" plus="window.apiswf.seek(window.songPosition + 30)" />
+  <smallStep minus="window.apiswf.seek(window.songPosition - 10)" plus="window.apiswf.seek(window.songPosition + 10)" />
+  <end condition="window.donePlaying" />
 </seekbar>
 
  <!-- PLAYING -->
  <state name="playing">
+  
   <event>
    <condition>
     <command name="pause" />
@@ -21,9 +24,30 @@
     <goto state="paused" />
    </action>
   </event>
+  
+  <event>
+   <condition>
+    <command name="chapter+" />
+   </condition>
+   <action>
+    <run script="window.nextTrack(); "/>
+   </action>
+  </event>
+  
+  <event>
+   <condition>
+    <command name="chapter-" />
+   </condition>
+   <action>
+    <run script="window.previousTrack(); "/>
+   </action>
+  </event>
+  
  </state>
+ 
  <!-- PAUSED -->
  <state name="paused">
+  
   <event>
    <condition>
     <command name="play" />
@@ -33,6 +57,27 @@
     <goto state="playing" />
    </action>
   </event>
+  
+  <event>
+   <condition>
+    <command name="chapter+" />
+   </condition>
+   <action>
+    <run script="window.nextTrack(); "/>
+    <goto state="playing" />
+   </action>
+  </event>
+  
+  <event>
+   <condition>
+    <command name="chapter-" />
+   </condition>
+   <action>
+    <run script="window.previousTrack(); "/>
+    <goto state="playing" />
+   </action>
+  </event>
+  
  </state>
  
 </site>
