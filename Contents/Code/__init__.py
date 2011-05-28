@@ -52,6 +52,7 @@ def MainMenu():
         dir.Append(Function(DirectoryItem(CollectionMenu, title="Collection", subtitle="", summary="", thumb=R(ICON))))
         dir.Append(Function(DirectoryItem(PlaylistsMenu, title="Playlists", subtitle="", summary="", thumb=R(ICON))))
         dir.Append(Function(DirectoryItem(HeavyRotationMenu, title="Heavy Rotation", subtitle="Your Network", summary="", thumb=R(ICON))))
+        dir.Append(Function(DirectoryItem(NewReleasesMenu, title="New Releases", subtitle="This Week", summary="", thumb=R(ICON))))
         dir.Append(Function(DirectoryItem(ClearSettings, title="Sign out of Rdio", summary='', thumb=R(ICON))))
     
     return dir
@@ -62,6 +63,27 @@ def ClearSettings(sender):
     Data.Remove('AccessPin')
     Data.Remove('RequestToken')
 
+####################################################################################################
+def NewReleasesMenu(sender):
+    dir = MediaContainer(viewGroup="InfoList", title2="New Releases")
+    
+    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
+    ACCESS_TOKEN = Data.LoadObject('AccessToken')
+    
+    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
+    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode({'method': 'getNewReleases', 'time': 'thisweek', 'count': 20}))
+    
+    result = JSON.ObjectFromString(response[1])
+    
+    for s in result['result']:
+        if s['canStream'] or s['canSample']:
+            dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
+    
+    if len(dir) == 0:
+        return MessageContainer('New Releases', 'No new releases.')
+    else:
+        return dir
+    
 ####################################################################################################
 def PlaylistsMenu(sender):
     dir = MediaContainer(viewGroup="InfoList", title2="Playlist")
@@ -82,7 +104,7 @@ def PlaylistsMenu(sender):
             trackIds += ('trackId=%s&' % t)
         trackIds = trackIds[:-1]
         
-        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], summary='', thumb=R(ICON)))
+        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle='Yours', summary='', thumb=R(ICON)))
     
     for s in result['result']['collab']:
         trackIds = ''
@@ -90,7 +112,7 @@ def PlaylistsMenu(sender):
             trackIds += ('trackId=%s&' % t)
         trackIds = trackIds[:-1]
         
-        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], summary='', thumb=R(ICON)))
+        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle='Collaborations', summary='', thumb=R(ICON)))
     
     for s in result['result']['subscribed']:
         trackIds = ''
@@ -98,7 +120,7 @@ def PlaylistsMenu(sender):
             trackIds += ('trackId=%s&' % t)
         trackIds = trackIds[:-1]
         
-        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], summary='', thumb=R(ICON)))
+        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle='Subscribed', summary='', thumb=R(ICON)))
         
     if len(dir) == 0:
         return MessageContainer('Playlists', 'No available playlists.')
