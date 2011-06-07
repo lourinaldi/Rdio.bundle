@@ -67,13 +67,7 @@ def ClearSettings(sender):
 def NewReleasesMenu(sender):
     dir = MediaContainer(viewGroup="InfoList", title2="New Releases")
     
-    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-    ACCESS_TOKEN = Data.LoadObject('AccessToken')
-    
-    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
-    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode({'method': 'getNewReleases', 'time': 'thisweek', 'count': 20}))
-    
-    result = JSON.ObjectFromString(response[1])
+    result = GetRdioResponse('getNewReleases',{'time': 'thisweek', 'count': 20})
     
     for s in result['result']:
         if s['canStream'] or s['canSample']:
@@ -88,13 +82,7 @@ def NewReleasesMenu(sender):
 def PlaylistsMenu(sender):
     dir = MediaContainer(viewGroup="InfoList", title2="Playlist")
     
-    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-    ACCESS_TOKEN = Data.LoadObject('AccessToken')
-    
-    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
-    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode({'method': 'getPlaylists', 'extras': 'trackKeys'}))
-    
-    result = JSON.ObjectFromString(response[1])
+    result = GetRdioResponse('getPlaylists', {'extras': 'trackKeys'})
     
     PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
     
@@ -131,14 +119,8 @@ def PlaylistsMenu(sender):
 def CollectionMenu(sender):
     dir = MediaContainer(viewGroup="InfoList", title2="Collection")
     
-    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-    ACCESS_TOKEN = Data.LoadObject('AccessToken')
+    result = GetRdioResponse('getArtistsInCollection', {})
     
-    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
-    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode({'method': 'getArtistsInCollection'}))
-    
-    result = JSON.ObjectFromString(response[1])
-
     for s in result['result']:
         dir.Append(Function(DirectoryItem(AlbumsMenu, title=s['name'], subtitle="", summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
     
@@ -148,13 +130,7 @@ def CollectionMenu(sender):
 def AlbumsMenu(sender, arg):
     dir = MediaContainer(viewGroup="InfoList", title2="Collection")
     
-    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-    ACCESS_TOKEN = Data.LoadObject('AccessToken')
-    
-    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
-    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode({'method': 'getAlbumsForArtistInCollection', 'artist': arg}))
-    
-    result = JSON.ObjectFromString(response[1])
+    result = GetRdioResponse('getAlbumsForArtistInCollection', {'artist': arg})
     
     for s in result['result']:
         if s['canStream'] or s['canSample']:
@@ -169,15 +145,9 @@ def AlbumsMenu(sender, arg):
 def SongsMenu(sender, arg):
     dir = MediaContainer(viewGroup="InfoList", title2="Collection")
     
-    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-    ACCESS_TOKEN = Data.LoadObject('AccessToken')
-    
-    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
+    result = GetRdioResponse('getTracksForAlbumInCollection', {'album': arg})
     
     PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
-    
-    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode({'method': 'getTracksForAlbumInCollection', 'album': arg}))
-    result = JSON.ObjectFromString(response[1])
     
     trackIds = ''
     for s in result['result']:
@@ -196,29 +166,14 @@ def SongsMenu(sender, arg):
         return MessageContainer('Songs', 'No available songs.')
     else:
         return dir
-    
-####################################################################################################
-def PlaySong(sender, arg):
-    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-    ACCESS_TOKEN = Data.LoadObject('AccessToken')
-    
-    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
-    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode({'method': 'getPlaybackToken', 'domain': 'mikedecaro.com'}))
 
 ####################################################################################################
 def HeavyRotationMenu(sender):
     dir = MediaContainer(viewGroup="InfoList", title2="Heavy Rotation")
     
-    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-    ACCESS_TOKEN = Data.LoadObject('AccessToken')
-    
     userKey = Data.LoadObject('UserKey')
+    result = GetRdioResponse('getHeavyRotation', {'user': userKey, 'type': 'albums', 'friends': 'true', 'limit': 12})
     
-    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
-    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode({'method': 'getHeavyRotation', 'user': userKey, 'type': 'albums', 'friends': 'true', 'limit': 12}))
-    
-    result = JSON.ObjectFromString(response[1])
-
     for s in result['result']:
         if s['canStream'] or s['canSample']:
             dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
@@ -292,11 +247,7 @@ def CheckLoggedIn():
     ACCESS_TOKEN = Data.LoadObject('AccessToken')
     
     if ACCESS_TOKEN:
-        CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-        # make an authenticated API call
-        client = oauth.Client(CONSUMER, ACCESS_TOKEN)
-        response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode({'method': 'currentUser', 'extras':'isSubscriber'}))
-        result = JSON.ObjectFromString(response[1])
+        result = GetRdioResponse('currentUser', {'extras':'isSubscriber'})
         
         if result['result']['isSubscriber'] == False:
             Data.SaveObject('UserKey', result['result']['key'])
@@ -361,4 +312,19 @@ def LogIn(sender):
         SavePlaybackToken()
     else:
         return MessageContainer('Error', 'Problem logging in.')
-        
+
+####################################################################################################
+def GetRdioResponse(methodName, args):
+    methodDict = {'method': methodName}
+    argList = dict(methodDict.items() + args.items())
+    
+    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
+    ACCESS_TOKEN = Data.LoadObject('AccessToken')
+    
+    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
+    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode(argList))
+    
+    result = JSON.ObjectFromString(response[1])
+    
+    return result
+    
