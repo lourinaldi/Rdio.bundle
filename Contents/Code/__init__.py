@@ -51,8 +51,9 @@ def MainMenu():
     else:
         dir.Append(Function(DirectoryItem(CollectionMenu, title="Collection", subtitle="", summary="", thumb=R(ICON))))
         dir.Append(Function(DirectoryItem(PlaylistsMenu, title="Playlists", subtitle="", summary="", thumb=R(ICON))))
-        dir.Append(Function(DirectoryItem(HeavyRotationMenu, title="Heavy Rotation", subtitle="Your Network", summary="", thumb=R(ICON))))
-        dir.Append(Function(DirectoryItem(NewReleasesMenu, title="New Releases", subtitle="This Week", summary="", thumb=R(ICON))))
+        dir.Append(Function(DirectoryItem(HeavyRotationMenu, title="Heavy Rotation", subtitle="Your Network", summary="", thumb=R(ICON)), network=None))
+        dir.Append(Function(DirectoryItem(NewReleasesMenu, title="New Releases", subtitle="", summary="", thumb=R(ICON)), timeframe=None))
+        dir.Append(Function(DirectoryItem(TopChartsMenu, title="Top Charts", subtitle="", summary="", thumb=R(ICON)), type=None))
         dir.Append(Function(DirectoryItem(ClearSettings, title="Sign out of Rdio", summary='', thumb=R(ICON))))
     
     return dir
@@ -64,19 +65,28 @@ def ClearSettings(sender):
     Data.Remove('RequestToken')
 
 ####################################################################################################
-def NewReleasesMenu(sender):
+# timeframe, "thisweek", "lastweek" or "twoweeks"
+def NewReleasesMenu(sender, timeframe):
     dir = MediaContainer(viewGroup="InfoList", title2="New Releases")
     
-    result = GetRdioResponse('getNewReleases',{'time': 'thisweek', 'count': 20})
-    
-    for s in result['result']:
-        if s['canStream'] or s['canSample']:
-            dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
-    
-    if len(dir) == 0:
-        return MessageContainer('New Releases', 'No new releases.')
+    if not timeframe or len(timeframe) == 0:
+        
+        dir.Append(Function(DirectoryItem(NewReleasesMenu, title="This Week", subtitle="", summary="", thumb=R(ICON)), timeframe="thisweek"))
+        dir.Append(Function(DirectoryItem(NewReleasesMenu, title="Last Week", subtitle="", summary="", thumb=R(ICON)), timeframe="lastweek"))
+        dir.Append(Function(DirectoryItem(NewReleasesMenu, title="Two Weeks Ago", subtitle="", summary="", thumb=R(ICON)), timeframe="twoweeks"))
+        
     else:
-        return dir
+        
+        result = GetRdioResponse('getNewReleases',{'time': timeframe, 'count': 20})
+    
+        for s in result['result']:
+            if s['canStream'] or s['canSample']:
+                dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), artistKey=s['artistKey'], albumKey=s['key'], menuTitle="New Releases"))
+        
+        if len(dir) == 0:
+            return MessageContainer('New Releases', 'No new releases.')
+     
+    return dir
     
 ####################################################################################################
 def PlaylistsMenu(sender):
@@ -84,37 +94,30 @@ def PlaylistsMenu(sender):
     
     result = GetRdioResponse('getPlaylists', {'extras': 'trackKeys'})
     
-    PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
+    PopulatePlaylistsMenu(dir, result['result']['owned'], 'Yours')
+    PopulatePlaylistsMenu(dir, result['result']['collab'], 'Collaborations')
+    PopulatePlaylistsMenu(dir, result['result']['subscribed'], 'Subscribed')
     
-    for s in result['result']['owned']:
-        trackIds = ''
-        for t in s['trackKeys']:
-            trackIds += ('trackId=%s&' % t)
-        trackIds = trackIds[:-1]
-        
-        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle='Yours', summary='', thumb=R(ICON)))
-    
-    for s in result['result']['collab']:
-        trackIds = ''
-        for t in s['trackKeys']:
-            trackIds += ('trackId=%s&' % t)
-        trackIds = trackIds[:-1]
-        
-        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle='Collaborations', summary='', thumb=R(ICON)))
-    
-    for s in result['result']['subscribed']:
-        trackIds = ''
-        for t in s['trackKeys']:
-            trackIds += ('trackId=%s&' % t)
-        trackIds = trackIds[:-1]
-        
-        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle='Subscribed', summary='', thumb=R(ICON)))
-        
     if len(dir) == 0:
         return MessageContainer('Playlists', 'No available playlists.')
     else:
         return dir
     
+####################################################################################################
+# Requires extra trackKeys
+def PopulatePlaylistsMenu(dir, trackList, desc):
+    PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
+    
+    for s in trackList:
+        trackIds = ''
+        for t in s['trackKeys']:
+            trackIds += ('trackId=%s&' % t)
+        trackIds = trackIds[:-1]
+        
+        Log(TRACK_URL % (PLAYBACK_TOKEN, trackIds))
+        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle=desc, summary='', thumb=R(ICON)))
+    
+
 ####################################################################################################
 def CollectionMenu(sender):
     dir = MediaContainer(viewGroup="InfoList", title2="Collection")
@@ -122,19 +125,19 @@ def CollectionMenu(sender):
     result = GetRdioResponse('getArtistsInCollection', {})
     
     for s in result['result']:
-        dir.Append(Function(DirectoryItem(AlbumsMenu, title=s['name'], subtitle="", summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
+        dir.Append(Function(DirectoryItem(CollectionAlbumsMenu, title=s['name'], subtitle="", summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
     
     return dir
     
 ####################################################################################################
-def AlbumsMenu(sender, arg):
+def CollectionAlbumsMenu(sender, arg):
     dir = MediaContainer(viewGroup="InfoList", title2="Collection")
     
     result = GetRdioResponse('getAlbumsForArtistInCollection', {'artist': arg})
     
     for s in result['result']:
         if s['canStream'] or s['canSample']:
-            dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle="", summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
+            dir.Append(Function(DirectoryItem(CollectionSongsMenu, title=s['name'], subtitle="", summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
     
     if len(dir) == 0:
         return MessageContainer('Albums', 'No available albums.')
@@ -142,11 +145,11 @@ def AlbumsMenu(sender, arg):
         return dir
     
 ####################################################################################################
-def SongsMenu(sender, arg):
+def CollectionSongsMenu(sender, arg):
     dir = MediaContainer(viewGroup="InfoList", title2="Collection")
     
     result = GetRdioResponse('getTracksForAlbumInCollection', {'album': arg})
-    
+    Log(result)
     PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
     
     trackIds = ''
@@ -168,16 +171,116 @@ def SongsMenu(sender, arg):
         return dir
 
 ####################################################################################################
-def HeavyRotationMenu(sender):
+def SongsMenu(sender, artistKey, albumKey, menuTitle):
+    dir = MediaContainer(viewGroup="InfoList", title2=menuTitle)
+    
+    result = []
+    
+    allResults = GetRdioResponse('getAlbumsForArtist', {'artist': artistKey, 'extras': 'tracks'})
+    Log(allResults)
+    for s in allResults['result']:
+        if s['key'] == albumKey:
+            result = s['tracks']
+            break
+    
+    PopulateSongsMenu(dir, result)
+    
+    if len(dir) == 1:
+        return MessageContainer('Songs', 'No available songs.')
+    else:
+        return dir
+   
+####################################################################################################
+def PopulateSongsMenu(dir, trackList):
+    PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
+    
+    trackIds = ''
+    for s in trackList:
+        trackIds += ('trackId=%s&' % s['key'])
+    trackIds = trackIds[:-1]
+    Log(TRACK_URL % (PLAYBACK_TOKEN, trackIds));
+    dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title='Play All', summary='', thumb=R(ICON)))
+    
+    for s in trackList:
+        if s['canStream'] or s['canSample']:
+            trackId = 'trackId=%s' % s['key']
+            Log(TRACK_URL % (PLAYBACK_TOKEN, trackId));
+            dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackId), title=s['name'], summary='', subtitle='', thumb=Function(GetThumb, url=s['icon'])))
+    
+
+####################################################################################################
+# network, "you", "yournetwork" or "everyone"
+def HeavyRotationMenu(sender, network):
     dir = MediaContainer(viewGroup="InfoList", title2="Heavy Rotation")
     
-    userKey = Data.LoadObject('UserKey')
-    result = GetRdioResponse('getHeavyRotation', {'user': userKey, 'type': 'albums', 'friends': 'true', 'limit': 12})
+    if not network or len(network) == 0:
+        
+        dir.Append(Function(DirectoryItem(HeavyRotationMenu, title="You", subtitle="", summary="", thumb=R(ICON)), network="you"))
+        dir.Append(Function(DirectoryItem(HeavyRotationMenu, title="Your Network", subtitle="", summary="", thumb=R(ICON)), network="yournetwork"))
+        dir.Append(Function(DirectoryItem(HeavyRotationMenu, title="Everyone", subtitle="", summary="", thumb=R(ICON)), network="everyone"))
+        
+    else:
+        
+        if network == "everyone":
+            argList = {'type': 'albums', 'friends': 'true', 'limit': 12}
+        else:
+            userKey = Data.LoadObject('UserKey')
+            if network == "yournetwork":
+                argList = {'user': userKey, 'type': 'albums', 'friends': 'true', 'limit': 12}
+            else:
+                argList = {'user': userKey, 'type': 'albums', 'friends': 'false', 'limit': 12}
+        
+        result = GetRdioResponse('getHeavyRotation', argList)
+        
+        for s in result['result']:
+            if s['canStream'] or s['canSample']:
+                dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), artistKey=s['artistKey'], albumKey=s['key'], menuTitle="Heavy Rotation"))
+        
+    return dir
+
+####################################################################################################
+# type, "Album", "Track" or "Playlist"
+def TopChartsMenu(sender, type):
+    dir = MediaContainer(viewGroup="InfoList", title2="Top Charts")
     
-    for s in result['result']:
-        if s['canStream'] or s['canSample']:
-            dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
-    
+    if not type or len(type) == 0:
+        
+        dir.Append(Function(DirectoryItem(TopChartsMenu, title="Top Albums", subtitle="", summary="", thumb=R(ICON)), type="Album"))
+        dir.Append(Function(DirectoryItem(TopChartsMenu, title="Top Songs", subtitle="", summary="", thumb=R(ICON)), type="Track"))
+        dir.Append(Function(DirectoryItem(TopChartsMenu, title="Top Playlists", subtitle="", summary="", thumb=R(ICON)), type="Playlist"))
+        
+    else:
+        
+        if type == "Album":
+            
+            result = GetRdioResponse('getTopCharts', {'type': type, 'count': 20})
+            
+            for s in result['result']:
+                if s['canStream'] or s['canSample']:
+                    dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), artistKey=s['artistKey'], albumKey=s['key'], menuTitle="Top Charts"))
+            
+            if len(dir) == 0:
+                return MessageContainer('Albums', 'No available albums.')
+                
+        elif type == "Track":
+            
+            result = GetRdioResponse('getTopCharts', {'type': type, 'count': 20})
+            
+            PopulateSongsMenu(dir, result['result'])
+            
+            if len(dir) == 1:
+                return MessageContainer('Songs', 'No available songs.')
+            
+        elif type == "Playlist":
+        
+            result = GetRdioResponse('getTopCharts', {'type': type, 'count': 20, 'extras': 'trackKeys'})
+            
+            PopulatePlaylistsMenu(dir, result['result'], '')
+            
+            if len(dir) == 0:
+                return MessageContainer('Playlists', 'No available playlists.')
+            
+        
     return dir
 
 ####################################################################################################
