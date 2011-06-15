@@ -6,7 +6,9 @@ import os
 CONSUMER_KEY = 'ws3sq4zta6hzkfasq6nxrnfe'
 CONSUMER_SECRET = 'juRRc6DYyD'
 
-TRACK_URL = 'http://mikedecaro.com/site/rdio/index.htm?%s&%s'
+TRACK_URL = 'http://mikedecaro.com/site/rdio/player.php?%s&%s'
+PLAYLIST_URL = 'http://mikedecaro.com/site/rdio/player.php?%s&user=%s&playlist=%s'
+QUEUE_URL = 'http://mikedecaro.com/site/rdio/queue.php'
 
 ART  = 'art-default.jpg'
 ICON = 'icon-default.png'
@@ -109,13 +111,27 @@ def PopulatePlaylistsMenu(dir, trackList, desc):
     PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
     
     for s in trackList:
-        trackIds = ''
-        for t in s['trackKeys']:
-            trackIds += ('trackId=%s&' % t)
-        trackIds = trackIds[:-1]
-        
-        Log(TRACK_URL % (PLAYBACK_TOKEN, trackIds))
-        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle=desc, summary='', thumb=R(ICON)))
+        if(len(s['trackKeys']) > 20):
+            trackIds = ''
+            for t in s['trackKeys']:
+                trackIds += ('trackId[]=%s&' % t)
+            trackIds = trackIds[:-1]
+            
+            userKey = Data.LoadObject('UserKey')
+            postData = ("user=%s%s&%s" % (userKey, s['key'], trackIds))
+            
+            HTTP.Request(QUEUE_URL, data=postData)
+            
+            Log(PLAYLIST_URL % (PLAYBACK_TOKEN, userKey, s['key']))
+            dir.Append(WebVideoItem(PLAYLIST_URL % (PLAYBACK_TOKEN, userKey, s['key']), title=s['name'], subtitle=desc, summary='', thumb=R(ICON)))
+        else:
+            trackIds = ''
+            for t in s['trackKeys']:
+                trackIds += ('trackId=%s&' % t)
+            trackIds = trackIds[:-1]
+            
+            Log(TRACK_URL % (PLAYBACK_TOKEN, trackIds))
+            dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle=desc, summary='', thumb=R(ICON)))
     
 
 ####################################################################################################
