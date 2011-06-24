@@ -6,9 +6,9 @@ import os
 CONSUMER_KEY = 'ws3sq4zta6hzkfasq6nxrnfe'
 CONSUMER_SECRET = 'juRRc6DYyD'
 
-TRACK_URL = 'http://mikedecaro.com/site/rdio/player.php?%s&%s'
-PLAYLIST_URL = 'http://mikedecaro.com/site/rdio/player.php?%s&user=%s&playlist=%s'
-QUEUE_URL = 'http://mikedecaro.com/site/rdio/queue.php'
+TRACK_URL = 'http://mikedecaro.com/apps/rdio/player.php?%s&%s'
+PLAYLIST_URL = 'http://mikedecaro.com/apps/rdio/player.php?%s&user=%s&playlist=%s'
+QUEUE_URL = 'http://mikedecaro.com/apps/rdio/queue.php'
 
 ART  = 'art-default.jpg'
 ICON = 'icon-default.png'
