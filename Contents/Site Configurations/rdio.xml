@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<site site="http://mikedecaro.com/site/rdio"
-       plugin="http://mikedecaro.com/site/rdio/display.swf"
+<site site="http://mikedecaro.com/apps/rdio"
+       plugin="http://mikedecaro.com/apps/rdio/display.swf"
        identifier="com.plexapp.plugins.rdio"
        initialState="playing"
        version="1.0">
