@@ -23,9 +23,9 @@
 	<key>PlexPluginCodePolicy</key>
 	<string>Elevated</string>
 	<key>PlexPluginConsoleLogging</key>
-	<string>1</string>
+	<string>0</string>
 	<key>PlexPluginDevMode</key>
-	<string>1</string>
+	<string>0</string>
 	<key>PlexPluginMode</key>
 	<string>AlwaysOn</string>
 </dict>
