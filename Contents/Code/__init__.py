@@ -14,6 +14,8 @@ ART  = 'art-default.jpg'
 ICON = 'icon-default.png'
 ICON_PREFS = 'icon-prefs.png'
 
+DEBUG_MODE = False
+
 ####################################################################################################
 def Start():
 
@@ -122,7 +124,7 @@ def PopulatePlaylistsMenu(dir, trackList, desc):
             
             HTTP.Request(QUEUE_URL, data=postData)
             
-            Log(PLAYLIST_URL % (PLAYBACK_TOKEN, userKey, s['key']))
+            DebugLog(PLAYLIST_URL % (PLAYBACK_TOKEN, userKey, s['key']))
             dir.Append(WebVideoItem(PLAYLIST_URL % (PLAYBACK_TOKEN, userKey, s['key']), title=s['name'], subtitle=desc, summary='', thumb=R(ICON)))
         else:
             trackIds = ''
@@ -130,7 +132,7 @@ def PopulatePlaylistsMenu(dir, trackList, desc):
                 trackIds += ('trackId=%s&' % t)
             trackIds = trackIds[:-1]
             
-            Log(TRACK_URL % (PLAYBACK_TOKEN, trackIds))
+            DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackIds))
             dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle=desc, summary='', thumb=R(ICON)))
     
 
@@ -165,20 +167,20 @@ def CollectionSongsMenu(sender, arg):
     dir = MediaContainer(viewGroup="InfoList", title2="Collection")
     
     result = GetRdioResponse('getTracksForAlbumInCollection', {'album': arg})
-    Log(result)
+    
     PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
     
     trackIds = ''
     for s in result['result']:
         trackIds += ('trackId=%s&' % s['key'])
     trackIds = trackIds[:-1]
-    Log(TRACK_URL % (PLAYBACK_TOKEN, trackIds));
+    DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackIds));
     dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title='Play All', summary='', thumb=R(ICON)))
     
     for s in result['result']:
         if s['canStream'] or s['canSample']:
             trackId = 'trackId=%s' % s['key']
-            Log(TRACK_URL % (PLAYBACK_TOKEN, trackId));
+            DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackId));
             dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackId), title=s['name'], summary='', subtitle='', thumb=Function(GetThumb, url=s['icon'])))
     
     if len(dir) == 1:
@@ -193,7 +195,7 @@ def SongsMenu(sender, artistKey, albumKey, menuTitle):
     result = []
     
     allResults = GetRdioResponse('getAlbumsForArtist', {'artist': artistKey, 'extras': 'tracks'})
-    Log(allResults)
+    
     for s in allResults['result']:
         if s['key'] == albumKey:
             result = s['tracks']
@@ -214,13 +216,13 @@ def PopulateSongsMenu(dir, trackList):
     for s in trackList:
         trackIds += ('trackId=%s&' % s['key'])
     trackIds = trackIds[:-1]
-    Log(TRACK_URL % (PLAYBACK_TOKEN, trackIds));
+    DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackIds));
     dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title='Play All', summary='', thumb=R(ICON)))
     
     for s in trackList:
         if s['canStream'] or s['canSample']:
             trackId = 'trackId=%s' % s['key']
-            Log(TRACK_URL % (PLAYBACK_TOKEN, trackId));
+            DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackId));
             dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackId), title=s['name'], summary='', subtitle='', thumb=Function(GetThumb, url=s['icon'])))
     
 
@@ -447,3 +449,6 @@ def GetRdioResponse(methodName, args):
     
     return result
     
+def DebugLog(data):
+    if DEBUG_MODE:
+        Log(data)
