@@ -6,24 +6,24 @@ import os
 CONSUMER_KEY = 'ws3sq4zta6hzkfasq6nxrnfe'
 CONSUMER_SECRET = 'juRRc6DYyD'
 
-TRACK_URL = 'http://mikedecaro.com/apps/rdio/player.php?%s&%s'
-PLAYLIST_URL = 'http://mikedecaro.com/apps/rdio/player.php?%s&user=%s&playlist=%s'
+TRACK_URL = 'http://mikedecaro.com/apps/rdio/player.php?v=1&%s&%s&index=%s'
+PLAYLIST_URL = 'http://mikedecaro.com/apps/rdio/player.php?v=1&%s&user=%s&playlist=%s'
 QUEUE_URL = 'http://mikedecaro.com/apps/rdio/queue.php'
 
 ART  = 'art-default.jpg'
 ICON = 'icon-default.png'
 ICON_PREFS = 'icon-prefs.png'
 
-DEBUG_MODE = False
+DEBUG_MODE = True
 
 ####################################################################################################
 def Start():
-
+    
     Plugin.AddPrefixHandler("/music/rdio", MainMenu, 'Rdio', ICON, ART)
-
+    
     Plugin.AddViewGroup("InfoList", viewMode="InfoList", mediaType="items")
     Plugin.AddViewGroup("List", viewMode="List", mediaType="items")
-
+    
     MediaContainer.title1 = 'Rdio'
     MediaContainer.viewGroup = "List"
     MediaContainer.art = R(ART)
@@ -33,23 +33,21 @@ def Start():
     
     HTTP.CacheTime = CACHE_1HOUR
     HTTP.Headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_7; en-us) AppleWebKit/533.20.25 (KHTML, like Gecko) Version/5.0.4 Safari/533.20.27'
-        
+    
     SavePlaybackToken()
 
 ####################################################################################################
 def MainMenu():
     dir = MediaContainer(viewGroup="InfoList", noCache=True)
-
+    
     if not CheckLoggedIn():
         Data.Remove('AccessToken')
         Data.Remove('AccessPin')
         Data.Remove('RequestToken')
-
+    
     ACCESS_TOKEN = Data.LoadObject('AccessToken')
     
     if not ACCESS_TOKEN:
-        #dir.Append(Function(DirectoryItem(LinkAccount, title="Link Rdio Account", subtitle="", summary="Clicking this will launch a web browser that will display a four digit number. Save this number and click Enter Pin.", thumb=R(ICON))))
-        #dir.Append(Function(InputDirectoryItem(FinishLinking, title="Enter Pin", summary="Finish linking Rdio to Plex by entering the pin that is displayed on the website.", prompt='Enter the pin displayed on the Rdio website.', thumb=R(ICON))))
         dir.Append(Function(DirectoryItem(LogIn, title="Sign in to Rdio", summary="", thumb=R(ICON))))
         dir.Append(PrefsItem(title='Set Username/Password', thumb=R(ICON_PREFS)))
     else:
@@ -78,35 +76,37 @@ def NewReleasesMenu(sender, timeframe):
         dir.Append(Function(DirectoryItem(NewReleasesMenu, title="This Week", subtitle="", summary="", thumb=R(ICON)), timeframe="thisweek"))
         dir.Append(Function(DirectoryItem(NewReleasesMenu, title="Last Week", subtitle="", summary="", thumb=R(ICON)), timeframe="lastweek"))
         dir.Append(Function(DirectoryItem(NewReleasesMenu, title="Two Weeks Ago", subtitle="", summary="", thumb=R(ICON)), timeframe="twoweeks"))
-        
+    
     else:
         
         result = GetRdioResponse('getNewReleases',{'time': timeframe, 'count': 20})
-    
-        for s in result['result']:
-            if s['canStream'] or s['canSample']:
-                dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), artistKey=s['artistKey'], albumKey=s['key'], menuTitle="New Releases"))
+        
+        if result:
+            for s in result['result']:
+                if s['canStream'] or s['canSample']:
+                    dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), artistKey=s['artistKey'], albumKey=s['key'], menuTitle="New Releases"))
         
         if len(dir) == 0:
             return MessageContainer('New Releases', 'No new releases.')
-     
-    return dir
     
+    return dir
+
 ####################################################################################################
 def PlaylistsMenu(sender):
     dir = MediaContainer(viewGroup="InfoList", title2="Playlist")
     
     result = GetRdioResponse('getPlaylists', {'extras': 'trackKeys'})
     
-    PopulatePlaylistsMenu(dir, result['result']['owned'], 'Yours')
-    PopulatePlaylistsMenu(dir, result['result']['collab'], 'Collaborations')
-    PopulatePlaylistsMenu(dir, result['result']['subscribed'], 'Subscribed')
+    if result:
+        PopulatePlaylistsMenu(dir, result['result']['owned'], 'Yours')
+        PopulatePlaylistsMenu(dir, result['result']['collab'], 'Collaborations')
+        PopulatePlaylistsMenu(dir, result['result']['subscribed'], 'Subscribed')
     
     if len(dir) == 0:
         return MessageContainer('Playlists', 'No available playlists.')
     else:
         return dir
-    
+
 ####################################################################################################
 # Requires extra trackKeys
 def PopulatePlaylistsMenu(dir, trackList, desc):
@@ -132,9 +132,9 @@ def PopulatePlaylistsMenu(dir, trackList, desc):
                 trackIds += ('trackId=%s&' % t)
             trackIds = trackIds[:-1]
             
-            DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackIds))
-            dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title=s['name'], subtitle=desc, summary='', thumb=R(ICON)))
-    
+            DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackIds, "-1"))
+            dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds, "-1"), title=s['name'], subtitle=desc, summary='', thumb=R(ICON)))
+
 
 ####################################################################################################
 def CollectionMenu(sender):
@@ -142,26 +142,28 @@ def CollectionMenu(sender):
     
     result = GetRdioResponse('getArtistsInCollection', {})
     
-    for s in result['result']:
-        dir.Append(Function(DirectoryItem(CollectionAlbumsMenu, title=s['name'], subtitle="", summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
+    if result:
+        for s in result['result']:
+            dir.Append(Function(DirectoryItem(CollectionAlbumsMenu, title=s['name'], subtitle="", summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
     
     return dir
-    
+
 ####################################################################################################
 def CollectionAlbumsMenu(sender, arg):
     dir = MediaContainer(viewGroup="InfoList", title2="Collection")
     
     result = GetRdioResponse('getAlbumsForArtistInCollection', {'artist': arg})
     
-    for s in result['result']:
-        if s['canStream'] or s['canSample']:
-            dir.Append(Function(DirectoryItem(CollectionSongsMenu, title=s['name'], subtitle="", summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
+    if result:
+        for s in result['result']:
+            if s['canStream'] or s['canSample']:
+                dir.Append(Function(DirectoryItem(CollectionSongsMenu, title=s['name'], subtitle="", summary="", thumb=Function(GetThumb, url=s['icon'])), arg=s['key']))
     
     if len(dir) == 0:
         return MessageContainer('Albums', 'No available albums.')
     else:
         return dir
-    
+
 ####################################################################################################
 def CollectionSongsMenu(sender, arg):
     dir = MediaContainer(viewGroup="InfoList", title2="Collection")
@@ -170,20 +172,10 @@ def CollectionSongsMenu(sender, arg):
     
     PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
     
-    trackIds = ''
-    for s in result['result']:
-        trackIds += ('trackId=%s&' % s['key'])
-    trackIds = trackIds[:-1]
-    DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackIds));
-    dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title='Play All', summary='', thumb=R(ICON)))
+    if result:
+        PopulateSongsMenu(dir, result['result'])
     
-    for s in result['result']:
-        if s['canStream'] or s['canSample']:
-            trackId = 'trackId=%s' % s['key']
-            DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackId));
-            dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackId), title=s['name'], summary='', subtitle='', thumb=Function(GetThumb, url=s['icon'])))
-    
-    if len(dir) == 1:
+    if len(dir) == 0:
         return MessageContainer('Songs', 'No available songs.')
     else:
         return dir
@@ -196,35 +188,34 @@ def SongsMenu(sender, artistKey, albumKey, menuTitle):
     
     allResults = GetRdioResponse('getAlbumsForArtist', {'artist': artistKey, 'extras': 'tracks'})
     
-    for s in allResults['result']:
-        if s['key'] == albumKey:
-            result = s['tracks']
-            break
+    if allResults:
+        for s in allResults['result']:
+            if s['key'] == albumKey:
+                result = s['tracks']
+                break
+        
+        PopulateSongsMenu(dir, result)
     
-    PopulateSongsMenu(dir, result)
-    
-    if len(dir) == 1:
+    if len(dir) == 0:
         return MessageContainer('Songs', 'No available songs.')
     else:
         return dir
-   
+
 ####################################################################################################
 def PopulateSongsMenu(dir, trackList):
     PLAYBACK_TOKEN = Data.LoadObject('PlaybackToken')
     
     trackIds = ''
     for s in trackList:
-        trackIds += ('trackId=%s&' % s['key'])
-    trackIds = trackIds[:-1]
-    DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackIds));
-    dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds), title='Play All', summary='', thumb=R(ICON)))
-    
-    for s in trackList:
         if s['canStream'] or s['canSample']:
-            trackId = 'trackId=%s' % s['key']
-            DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackId));
-            dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackId), title=s['name'], summary='', subtitle='', thumb=Function(GetThumb, url=s['icon'])))
+            trackIds += ('trackId=%s&' % s['key'])
+    trackIds = trackIds[:-1]
     
+    index = 0
+    for s in trackList:
+        DebugLog(TRACK_URL % (PLAYBACK_TOKEN, trackIds, index));
+        dir.Append(WebVideoItem(TRACK_URL % (PLAYBACK_TOKEN, trackIds, index), title=s['name'], summary='', subtitle='', thumb=Function(GetThumb, url=s['icon'])))
+        index = index + 1
 
 ####################################################################################################
 # network, "you", "yournetwork" or "everyone"
@@ -236,7 +227,7 @@ def HeavyRotationMenu(sender, network):
         dir.Append(Function(DirectoryItem(HeavyRotationMenu, title="You", subtitle="", summary="", thumb=R(ICON)), network="you"))
         dir.Append(Function(DirectoryItem(HeavyRotationMenu, title="Your Network", subtitle="", summary="", thumb=R(ICON)), network="yournetwork"))
         dir.Append(Function(DirectoryItem(HeavyRotationMenu, title="Everyone", subtitle="", summary="", thumb=R(ICON)), network="everyone"))
-        
+    
     else:
         
         if network == "everyone":
@@ -250,10 +241,11 @@ def HeavyRotationMenu(sender, network):
         
         result = GetRdioResponse('getHeavyRotation', argList)
         
-        for s in result['result']:
-            if s['canStream'] or s['canSample']:
-                dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), artistKey=s['artistKey'], albumKey=s['key'], menuTitle="Heavy Rotation"))
-        
+        if result:
+            for s in result['result']:
+                if s['canStream'] or s['canSample']:
+                    dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), artistKey=s['artistKey'], albumKey=s['key'], menuTitle="Heavy Rotation"))
+    
     return dir
 
 ####################################################################################################
@@ -266,79 +258,43 @@ def TopChartsMenu(sender, type):
         dir.Append(Function(DirectoryItem(TopChartsMenu, title="Top Albums", subtitle="", summary="", thumb=R(ICON)), type="Album"))
         dir.Append(Function(DirectoryItem(TopChartsMenu, title="Top Songs", subtitle="", summary="", thumb=R(ICON)), type="Track"))
         dir.Append(Function(DirectoryItem(TopChartsMenu, title="Top Playlists", subtitle="", summary="", thumb=R(ICON)), type="Playlist"))
-        
+    
     else:
         
         if type == "Album":
             
             result = GetRdioResponse('getTopCharts', {'type': type, 'count': 20})
             
-            for s in result['result']:
-                if s['canStream'] or s['canSample']:
-                    dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), artistKey=s['artistKey'], albumKey=s['key'], menuTitle="Top Charts"))
+            if result:
+                for s in result['result']:
+                    if s['canStream'] or s['canSample']:
+                        dir.Append(Function(DirectoryItem(SongsMenu, title=s['name'], subtitle=s['artist'], summary="", thumb=Function(GetThumb, url=s['icon'])), artistKey=s['artistKey'], albumKey=s['key'], menuTitle="Top Charts"))
             
             if len(dir) == 0:
                 return MessageContainer('Albums', 'No available albums.')
-                
+        
         elif type == "Track":
             
             result = GetRdioResponse('getTopCharts', {'type': type, 'count': 20})
             
-            PopulateSongsMenu(dir, result['result'])
+            if result:
+                PopulateSongsMenu(dir, result['result'])
             
-            if len(dir) == 1:
+            if len(dir) == 0:
                 return MessageContainer('Songs', 'No available songs.')
-            
-        elif type == "Playlist":
         
+        elif type == "Playlist":
+            
             result = GetRdioResponse('getTopCharts', {'type': type, 'count': 20, 'extras': 'trackKeys'})
             
-            PopulatePlaylistsMenu(dir, result['result'], '')
+            if result:
+                PopulatePlaylistsMenu(dir, result['result'], '')
             
             if len(dir) == 0:
                 return MessageContainer('Playlists', 'No available playlists.')
-            
-        
+    
+    
     return dir
-
-####################################################################################################
-#NON AUTOMATED LOGIN
-def LinkAccount(sender):
-    # create the OAuth consumer credentials
-    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-    
-    client = oauth.Client(CONSUMER)
-    response, content = client.request('http://api.rdio.com/oauth/request_token', 'POST', urllib.urlencode({'oauth_callback':'oob'}))
-    parsed_content = dict(cgi.parse_qsl(content))
-    
-    REQUEST_TOKEN = oauth.Token(parsed_content['oauth_token'], parsed_content['oauth_token_secret'])
-    
-    Data.SaveObject('RequestToken', REQUEST_TOKEN)
-    
-    Helper.Run('open.sh', '%s?oauth_token=%s' % (parsed_content['login_url'], parsed_content['oauth_token']))
-
-def FinishLinking(sender, query):
-    REQUEST_TOKEN = Data.LoadObject('RequestToken')
-    
-    if REQUEST_TOKEN and len(query) > 0:
-        CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-        
-        # associate the verifier with the request token
-        REQUEST_TOKEN.set_verifier(query)
-        
-        # upgrade the request token to an access token
-        client = oauth.Client(CONSUMER, REQUEST_TOKEN)
-        response, content = client.request('http://api.rdio.com/oauth/access_token', 'POST')
-        parsed_content = dict(cgi.parse_qsl(content))
-        ACCESS_TOKEN = oauth.Token(parsed_content['oauth_token'], parsed_content['oauth_token_secret'])
-
-        Data.SaveObject('AccessToken', ACCESS_TOKEN)
-        
-        SavePlaybackToken()
-    elif not requestToken:
-        return MessageContainer('Invalid Pin', 'Please link your account first.')
-    elif len(query) == 0:
-        return MessageContainer('Invalid Pin', 'You entered an invalid pin.')
 
 ####################################################################################################
 def GetThumb(url):
@@ -348,9 +304,9 @@ def GetThumb(url):
             return DataObject(data, 'image/jpeg')
         except:
             pass
-
-    return Redirect(R(ICON))
     
+    return Redirect(R(ICON))
+
 ####################################################################################################
 def SavePlaybackToken():
     ACCESS_TOKEN = Data.LoadObject('AccessToken')
@@ -370,17 +326,18 @@ def CheckLoggedIn():
     if ACCESS_TOKEN:
         result = GetRdioResponse('currentUser', {'extras':'isSubscriber'})
         
-        if result['result']['isSubscriber'] == False:
-            Data.SaveObject('UserKey', result['result']['key'])
-            return 'Free'
-        else:
-            Data.SaveObject('UserKey', result['result']['key'])
-            return 'True'
-            
+        if result:
+            if result['result']['isSubscriber'] == False:
+                Data.SaveObject('UserKey', result['result']['key'])
+                return 'Free'
+            else:
+                Data.SaveObject('UserKey', result['result']['key'])
+                return 'True'
+    
     Data.Remove('UserKey')
+    return None
 
 ####################################################################################################
-#AUTOMATED LOGIN
 def LogIn(sender):
     if not Prefs['rdio_user'] or not Prefs['rdio_pass']:
         return MessageContainer('Credentials', 'Please enter your username and password.')
@@ -407,7 +364,7 @@ def LogIn(sender):
             return MessageContainer('Credentials', 'Invalid username/password.')
         elif str(response).find('login_form') > -1:
             return MessageContainer('Error', 'Couldn\'t log in.')
-            
+    
     xmlObject = HTML.ElementFromString(str(response))
     verifier = xmlObject.xpath("//input[@name='verifier']")[0].value
     
@@ -436,19 +393,27 @@ def LogIn(sender):
 
 ####################################################################################################
 def GetRdioResponse(methodName, args):
-    methodDict = {'method': methodName}
-    argList = dict(methodDict.items() + args.items())
+    result = None
     
-    CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
-    ACCESS_TOKEN = Data.LoadObject('AccessToken')
-    
-    client = oauth.Client(CONSUMER, ACCESS_TOKEN)
-    response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode(argList))
-    
-    result = JSON.ObjectFromString(response[1])
+    try:
+        methodDict = {'method': methodName}
+        argList = dict(methodDict.items() + args.items())
+        
+        CONSUMER = oauth.Consumer(CONSUMER_KEY, CONSUMER_SECRET)
+        ACCESS_TOKEN = Data.LoadObject('AccessToken')
+        
+        client = oauth.Client(CONSUMER, ACCESS_TOKEN)
+        response = client.request('http://api.rdio.com/1/', 'POST', urllib.urlencode(argList))
+        
+        if not "401 Invalid Or Expired Token" in response[1]:
+            result = JSON.ObjectFromString(response[1])
+    except Exception, e:
+        Log.Error('Connection Error: %s' % (e))
+        result = None
+        pass
     
     return result
-    
+
 def DebugLog(data):
     if DEBUG_MODE:
-        Log(data)
+        Log.Debug(data)
