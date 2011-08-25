@@ -22,11 +22,12 @@
 	<string>2</string>
 	<key>PlexPluginCodePolicy</key>
 	<string>Elevated</string>
-	<key>PlexPluginConsoleLogging</key>
-	<string>0</string>
-	<key>PlexPluginDevMode</key>
-	<string>0</string>
 	<key>PlexPluginMode</key>
 	<string>AlwaysOn</string>
+	<key>PlexPluginRegions</key>
+	<array>
+		<string>US</string>
+		<string>CA</string>
+	</array>
 </dict>
 </plist>
