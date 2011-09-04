@@ -1,10 +1,13 @@
 Installation  
 ------------
 
-Method 1:  
-Download the latest package, unzip it, and place Rdio.bundle in ~/Library/Application Support/Plex Media Server/Plug-ins
+Method 1 (recommended):  
+Search for Rdio in Plex Online, within the Plex desktop app.
 
 Method 2:  
+Download the latest package, unzip it, and place Rdio.bundle in ~/Library/Application Support/Plex Media Server/Plug-ins
+
+Method 3:  
 Run the following commands.  
 cd ~/Library/Application Support/Plex Media Server/Plug-ins  
 git clone https://github.com/mikedecaro/Rdio.bundle.git
