@@ -14,7 +14,7 @@ ART  = 'art-default.jpg'
 ICON = 'icon-default.png'
 ICON_PREFS = 'icon-prefs.png'
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 ####################################################################################################
 def Start():
