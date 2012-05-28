@@ -15,9 +15,9 @@ git clone https://github.com/mikedecaro/Rdio.bundle.git
 
 Change Log
 ----------
-Version 1.0.2
-Fixed a login issue caused by Rdio updating their login page.
-Fixed an issue with logging in as a free account.
+Version 1.0.2  
+Fixed a login issue caused by Rdio updating their login page.  
+Fixed an issue with logging in as a free account.  
 
 Version 1.0.1  
 Fixed an issue with maintaining log in.  
