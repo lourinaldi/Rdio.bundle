@@ -14,7 +14,7 @@ ART  = 'art-default.jpg'
 ICON = 'icon-default.png'
 ICON_PREFS = 'icon-prefs.png'
 
-DEBUG_MODE = True
+DEBUG_MODE = False
 
 ####################################################################################################
 def Start():
@@ -357,25 +357,26 @@ def LogIn(sender):
     
     response = HTTP.Request(AUTH_URL)
     
-    if str(response).find('login_form') > -1:
-        postValues = {'email':Prefs['rdio_user'], 'password': Prefs['rdio_pass']}
-        response = HTTP.Request(AUTH_URL, values=postValues)
-        if str(response).find('<li>auth</li>') > -1:
+    if response.content.find('login') > -1:
+        postValues = {'username':Prefs['rdio_user'], 'password': Prefs['rdio_pass'], 'remember_me': '1'}
+        LOGIN_URL = 'https://www.rdio.com/signin/?next=/oauth/authorize?oauth_token=%s' % parsed_content['oauth_token']
+        response = HTTP.Request(LOGIN_URL, values=postValues)
+        if response.content.find('<li>auth</li>') > -1:
             return MessageContainer('Credentials', 'Invalid username/password.')
-        elif str(response).find('login_form') > -1:
+        elif response.content.find('login') > -1:
             return MessageContainer('Error', 'Couldn\'t log in.')
     
-    xmlObject = HTML.ElementFromString(str(response))
+    xmlObject = HTML.ElementFromString(response.content)
     verifier = xmlObject.xpath("//input[@name='verifier']")[0].value
     
     postValues = {'oauth_token':parsed_content['oauth_token'], 'verifier':verifier, 'approve': ''}
     response = HTTP.Request(AUTH_URL, values=postValues)
     
-    xmlObject = HTML.ElementFromString(str(response))
-    ACCESS_PIN = xmlObject.xpath("//strong")[0].text
+    if response.content.find(verifier) == -1:
+        return MessageContainer('Error', 'Problem obtaining pin.')
     
     # associate the verifier with the request token
-    REQUEST_TOKEN.set_verifier(ACCESS_PIN)
+    REQUEST_TOKEN.set_verifier(verifier)
     
     # upgrade the request token to an access token
     client = oauth.Client(CONSUMER, REQUEST_TOKEN)
@@ -386,7 +387,7 @@ def LogIn(sender):
     Data.SaveObject('AccessToken', ACCESS_TOKEN)
     
     loggedInResult = CheckLoggedIn()
-    if loggedInResult == 'True' or logedInResult == 'Free':
+    if loggedInResult == 'True' or loggedInResult == 'Free':
         SavePlaybackToken()
     else:
         return MessageContainer('Error', 'Problem logging in.')
